@@ -1,0 +1,688 @@
+
+> source('utils.r')
+
+> "TEST 1"
+[1] "TEST 1"
+
+> "Prepare Data"
+[1] "Prepare Data"
+
+> raw_normal = read_tsv('GSE89278_RAW_Control_Methylation_Analysis_Data.txt')
+
+> raw_general = read_tsv('GSE72308_RAW_Methylation_Analysis_Data.txt')
+
+> normal_test_data = mutate(raw_normal, Category = 'Normal')
+
+> general_test_data = mutate(raw_general, Category = 'General')
+
+> processed_test_normal = process_data(raw_normal)
+
+> processed_general = process_data(raw_general)
+
+> "Compare First Dataset to Normal"
+[1] "Compare First Dataset to Normal"
+
+> general_vs_normal = compareTwo(processed_test_normal, processed_general)
+
+> general_vs_normal = rename(general_vs_normal, general_diff = diff)
+
+> significant_genes_test_1 = compareTwoCategories(processed_test_normal, normal_test_data, processed_general, general_test_data, .01, "general_diff")
+[1] "ALPHA 9.42507068803016e-06"
+# A tibble: 1,060 x 2
+   Gene          p_value
+   <chr>           <dbl>
+ 1 MIR21        1.69e-74
+ 2 DM119512     1.82e-74
+ 3 AKR1C3       1.64e-67
+ 4 SELENBP1     1.82e-74
+ 5 PRELP        2.09e-74
+ 6 TSPY1        1.19e-30
+ 7 LOC100271702 1.69e-74
+ 8 LOC150622    1.87e-74
+ 9 S100A16      1.67e-74
+10 GPNMB        1.67e-74
+# ... with 1,050 more rows
+
+> #Confirm Results
+> "Prepare Data"
+[1] "Prepare Data"
+
+> raw_confirm = read_tsv('GSE84207_RAW_Methylation_Analysis_Data.txt')
+
+> confirm_test_data = mutate(raw_confirm, Category = 'Confirm')
+
+> processed_confirm = process_data(raw_confirm)
+
+> "Compare Second Dataset to Normal"
+[1] "Compare Second Dataset to Normal"
+
+> confirm_vs_normal = compareTwo(processed_test_normal, processed_confirm)
+
+> confirm_vs_normal = rename(confirm_vs_normal, confirm_diff = diff)
+
+> significant_genes_test_2 =  compareTwoCategories(processed_test_normal, normal_test_data, processed_confirm, confirm_test_data, .01, "confirm_diff")
+[1] "ALPHA 8.01282051282051e-06"
+# A tibble: 1,248 x 2
+   Gene          p_value
+   <chr>           <dbl>
+ 1 MIR21        1.55e-77
+ 2 DM119512     1.65e-77
+ 3 PRELP        1.55e-77
+ 4 LOC100271702 1.52e-77
+ 5 AKR1C3       3.67e-75
+ 6 S100A16      1.52e-77
+ 7 HRCT1        1.52e-77
+ 8 SELENBP1     1.53e-77
+ 9 GPNMB        1.52e-77
+10 ANXA9        1.53e-77
+# ... with 1,238 more rows
+
+> "Combine Results"
+[1] "Combine Results"
+
+> significant_genes_test_1 = rename(significant_genes_test_1, p_value_test_1 = p_value)
+
+> significant_genes_test_2 = rename(significant_genes_test_2, p_value_test_2 = p_value)
+
+> joined_final_results = inner_join(significant_genes_test_1,significant_genes_test_2)
+
+> joined = inner_join(joined_final_results, general_vs_normal)
+
+> joined_final_results_confirmation_test = inner_join(joined, confirm_vs_normal)
+
+> print(joined_final_results_confirmation_test)
+# A tibble: 859 x 5
+   Gene         p_value_test_1 p_value_test_2 general_diff confirm_diff
+   <chr>                 <dbl>          <dbl>        <dbl>        <dbl>
+ 1 MIR21              1.69e-74       1.55e-77        0.607        0.678
+ 2 DM119512           1.82e-74       1.65e-77        0.581        0.669
+ 3 AKR1C3             1.64e-67       3.67e-75        0.554        0.584
+ 4 SELENBP1           1.82e-74       1.53e-77        0.473        0.573
+ 5 PRELP              2.09e-74       1.55e-77        0.468        0.619
+ 6 TSPY1              1.19e-30       1.13e-21        0.468        0.416
+ 7 LOC100271702       1.69e-74       1.52e-77        0.467        0.608
+ 8 LOC150622          1.87e-74       1.52e-77        0.461        0.547
+ 9 S100A16            1.67e-74       1.52e-77        0.454        0.582
+10 GPNMB              1.67e-74       1.52e-77        0.438        0.559
+# ... with 849 more rows
+
+> significant_genes_final = pull(joined_final_results_confirmation_test, Gene)
+
+> "TEST 2 - GWAS"
+[1] "TEST 2 - GWAS"
+
+> gwas_genes = read_tsv('genes.tsv')
+
+> significant_gwas_genes_summary = inner_join(joined_final_results_confirmation_test, gwas_genes)
+
+> significant_gwas_genes = pull(significant_gwas_genes_summary, Gene)
+
+> print(significant_gwas_genes)
+ [1] "ABCA8"      "MTMR11"     "CUX2"       "FGF13"      "CYP1B1-AS1"
+ [6] "LRRC25"     "MARK2P9"    "MCHR2"      "PAX9"       "FGD2"      
+[11] "PTPN22"     "HORMAD2"    "SPAG6"      "RAP1GAP2"  
+
+> general_gwas_genes = filter(general_test_data, Gene %in% significant_gwas_genes)
+
+> normal_gwas_genes = filter(normal_test_data, Gene %in% significant_gwas_genes)
+
+> confirm_gwas_genes = filter(confirm_test_data, Gene %in% significant_gwas_genes)
+
+> "TEST 3 - sub-types"
+[1] "TEST 3 - sub-types"
+
+> "Prepare Data"
+[1] "Prepare Data"
+
+> classes = read_tsv('classifications.tsv')
+
+> raw_multiple_groups_data = read_tsv('GSE141338_RAW_Methylation_Analysis_Data.txt') %>% separate(Patient_ID, c("Accession", "Patient_ID"), "_", extra = "merge")
+
+> pre_name_joined_data = inner_join(classes, raw_multiple_groups_data)
+
+> joined_data = rename_categories(pre_name_joined_data)  %>% mutate(Category = as.factor(Category))
+
+> subtypes_gwas_genes = filter(joined_data, Gene %in% significant_gwas_genes)
+
+> HER2 = filter(joined_data, Category == 'HER2')
+
+> LuminalA = filter(joined_data, Category == 'Luminal A')
+
+> LuminalB = filter(joined_data, Category == 'Luminal B')
+
+> luminalHER2 = filter(joined_data, Category =='Luminal-HER2')
+
+> normalBreast = filter(joined_data, Category == 'Normal')
+
+> TN = filter(joined_data, Category =='TN')
+
+> inVitro = filter(joined_data, Category == 'In Vitro')
+
+> "Process Data"
+[1] "Process Data"
+
+> processedHER2 = process_data(HER2)
+
+> processedLuminalA = process_data(LuminalA)
+
+> processedLuminalB = process_data(LuminalB)
+
+> processedLuminalHER2 = process_data(luminalHER2)
+
+> processedNormal = process_data(normalBreast)
+
+> processedTN = process_data(TN)
+
+> processedInVitro = process_data(inVitro)
+
+> "Compare all versus normal"
+[1] "Compare all versus normal"
+
+> HER2_NORMAL = compareTwo(processedHER2, processedNormal)
+
+> TN_NORMAL = compareTwo(processedTN, processedNormal)
+
+> LuminalA_NORMAL = compareTwo(processedLuminalA, processedNormal)
+
+> LuminalB_NORMAL = compareTwo(processedLuminalB, processedNormal)
+
+> LuminalHER2_NORMAL = compareTwo(processedLuminalHER2, processedNormal)
+
+> InVitro_NORMAL = compareTwo(processedInVitro, processedNormal)
+
+> HER2_NORMAL = rename(HER2_NORMAL, HER_diff = diff)
+
+> TN_NORMAL = rename(TN_NORMAL, TN_diff = diff)
+
+> LuminalA_NORMAL = rename(LuminalA_NORMAL, LuminalA_diff = diff)
+
+> LuminalB_NORMAL = rename(LuminalB_NORMAL, LuminalB_diff = diff)
+
+> LuminalHER2_NORMAL = rename(LuminalHER2_NORMAL, LuminalHER2_diff = diff)
+
+> "Discover Interesting Genes"
+[1] "Discover Interesting Genes"
+
+> all_joined = list(HER2_NORMAL, TN_NORMAL, LuminalA_NORMAL, LuminalB_NORMAL, LuminalHER2_NORMAL) %>%
++   reduce(inner_join)
+
+> view(all_joined)
+
+> genes = all_joined %>% pull(Gene)
+
+> common_genes_all = filter(joined_data, Gene %in% genes) %>% filter(Category != "In Vitro")
+
+> "STATISTICAL ANALYSIS"
+[1] "STATISTICAL ANALYSIS"
+
+> print(paste0("ALPHA ", .05 / length(genes)))
+[1] "ALPHA 0.05"
+
+> significant_genes_all_types = performStatisticalAnalysis(common_genes_all, genes, .05 / length(genes))
+[1] "ALPHA 0.05"
+[1] "Statistical test for  NPTX2"
+
+	Pairwise comparisons using Dunn's-test for multiple	
+                         comparisons of independent samples 
+
+data:  Value by Category 
+
+             HER2   Luminal-HER2 Luminal A Luminal B Normal
+Luminal-HER2 0.1985 -            -         -         -     
+Luminal A    0.7624 0.2732       -         -         -     
+Luminal B    0.1236 0.6599       0.1414    -         -     
+Normal       0.1985 0.0165       0.1414    0.0051    -     
+TN           0.6599 0.4308       0.7624    0.1985    0.1236
+
+P value adjustment method: fdr 
+
+> print(significant_genes_all_types)
+# A tibble: 2 x 4
+  Gene  Category1 Category2    corrected_p_value
+  <chr> <chr>     <chr>                    <dbl>
+1 NPTX2 Normal    Luminal-HER2           0.0165 
+2 NPTX2 Normal    Luminal B              0.00507
+
+> "TEST GENES NOT IN ORIGNIAL SIGNIFICANT SET"
+[1] "TEST GENES NOT IN ORIGNIAL SIGNIFICANT SET"
+
+> genes_not_in_original = NULL
+
+> for (gene in genes){
++   if (!(gene %in% significant_genes_final)){
++     print(paste0(c(gene, " not found significant in original test")))
++     genes_not_in_original = c(genes_not_in_original, gene)
++   }
++   
++ }
+
+> print(genes_not_in_original)
+NULL
+
+> significant_genes_not_significant_in_test_1 = genes_not_in_original
+
+> "Perform Statistical Analysis against original data"
+[1] "Perform Statistical Analysis against original data"
+
+> "Test Data Set"
+[1] "Test Data Set"
+
+> filtered_normal_3 = filter(normal_test_data, Gene %in% genes) 
+
+> filtered_general_3 = filter(general_test_data, Gene %in% genes) 
+
+> joined_test_3 = bind_rows(filtered_normal_3, filtered_general_3) %>% mutate(Category = as.factor(Category))
+
+> corrected_alpha = .01/length(genes)
+
+> print(paste0("ALPHA ", corrected_alpha))
+[1] "ALPHA 0.01"
+
+> significant_genes_test_3 = performTwoWayStatisticalAnalysis(joined_test_3, genes, corrected_alpha)
+
+> print(significant_genes_test_3)
+# A tibble: 1 x 2
+  Gene   p_value
+  <chr>    <dbl>
+1 NPTX2 1.94e-74
+
+> "Test Confirm Data Set"
+[1] "Test Confirm Data Set"
+
+> filtered_confirm_3 = filter(confirm_test_data, Gene %in% genes) 
+
+> joined_test_4 = bind_rows(filtered_normal_3, filtered_confirm_3) %>% mutate(Category = as.factor(Category))
+
+> corrected_alpha = .01/length(genes)
+
+> print(paste0("ALPHA ", corrected_alpha))
+[1] "ALPHA 0.01"
+
+> significant_genes_test_4 = performTwoWayStatisticalAnalysis(joined_test_4, genes, corrected_alpha)
+
+> print(significant_genes_test_4)
+# A tibble: 1 x 2
+  Gene   p_value
+  <chr>    <dbl>
+1 NPTX2 4.75e-77
+
+> general_vs_normal = compareTwo(processed_test_normal, processed_general, threshold=0)
+
+> print(filter(general_vs_normal, Gene %in% genes_not_in_original))
+# A tibble: 0 x 2
+# ... with 2 variables: Gene <chr>, diff <dbl>
+
+> confirm_vs_normal = compareTwo(processed_test_normal, processed_confirm, threshold=0)
+
+> print(filter(confirm_vs_normal, Gene %in% genes_not_in_original))
+# A tibble: 0 x 2
+# ... with 2 variables: Gene <chr>, diff <dbl>
+
+> "COMMON GENES WITHOUT HER2"
+[1] "COMMON GENES WITHOUT HER2"
+
+> all_joined_not_her2 = list(TN_NORMAL, LuminalA_NORMAL, LuminalB_NORMAL, LuminalHER2_NORMAL) %>%
++   reduce(inner_join)
+
+> view(all_joined_not_her2)
+
+> genes = all_joined_not_her2 %>% pull(Gene)
+
+> common_genes_not_her2 = filter(joined_data, Gene %in% genes) %>% filter(Category != "HER2") %>% filter(Category != "In Vitro")
+
+> "STATISTICAL ANALYSIS"
+[1] "STATISTICAL ANALYSIS"
+
+> print(paste0("ALPHA ", .05 / length(genes)))
+[1] "ALPHA 0.01"
+
+> significant_genes_all_types_not_her2 = performStatisticalAnalysis(common_genes_not_her2, genes, .05 / length(genes))
+[1] "ALPHA 0.01"
+[1] "Statistical test for  NPTX2"
+
+	Pairwise comparisons using Dunn's-test for multiple	
+                         comparisons of independent samples 
+
+data:  Value by Category 
+
+          Luminal-HER2 Luminal A Luminal B Normal
+Luminal A 0.2860       -         -         -     
+Luminal B 0.5992       0.1211    -         -     
+Normal    0.0142       0.1211    0.0038    -     
+TN        0.4183       0.7731    0.1907    0.1211
+
+P value adjustment method: fdr 
+[1] "Statistical test for  NKAPL"
+
+	Pairwise comparisons using Dunn's-test for multiple	
+                         comparisons of independent samples 
+
+data:  Value by Category 
+
+          Luminal-HER2 Luminal A Luminal B Normal
+Luminal A 0.6202       -         -         -     
+Luminal B 0.7169       0.4183    -         -     
+Normal    0.0085       0.0314    0.0036    -     
+TN        0.7169       0.7750    0.5763    0.0236
+
+P value adjustment method: fdr 
+[1] "Statistical test for  AX747088"
+
+	Pairwise comparisons using Dunn's-test for multiple	
+                         comparisons of independent samples 
+
+data:  Value by Category 
+
+          Luminal-HER2 Luminal A Luminal B Normal
+Luminal A 0.9800       -         -         -     
+Luminal B 0.2927       0.2927    -         -     
+Normal    0.0121       0.0121    0.0008    -     
+TN        0.1876       0.1876    0.0213    0.1876
+
+P value adjustment method: fdr 
+[1] "Statistical test for  C1orf114"
+
+	Pairwise comparisons using Dunn's-test for multiple	
+                         comparisons of independent samples 
+
+data:  Value by Category 
+
+          Luminal-HER2 Luminal A Luminal B Normal
+Luminal A 0.5154       -         -         -     
+Luminal B 0.6140       0.2581    -         -     
+Normal    0.0142       0.0711    0.0056    -     
+TN        0.2581       0.6140    0.1559    0.1689
+
+P value adjustment method: fdr 
+[1] "Statistical test for  OR6Y1"
+
+	Pairwise comparisons using Dunn's-test for multiple	
+                         comparisons of independent samples 
+
+data:  Value by Category 
+
+          Luminal-HER2 Luminal A Luminal B Normal
+Luminal A 0.614        -         -         -     
+Luminal B 0.433        0.228     -         -     
+Normal    0.130        0.228     0.025     -     
+TN        0.614        0.433     0.614     0.054 
+
+P value adjustment method: fdr 
+
+> print(significant_genes_all_types_not_her2)
+# A tibble: 5 x 4
+  Gene     Category1 Category2    corrected_p_value
+  <chr>    <chr>     <chr>                    <dbl>
+1 NPTX2    Normal    Luminal B             0.00382 
+2 NKAPL    Normal    Luminal-HER2          0.00846 
+3 NKAPL    Normal    Luminal B             0.00362 
+4 AX747088 Normal    Luminal B             0.000798
+5 C1orf114 Normal    Luminal B             0.00559 
+
+> genes_not_in_original = NULL
+
+> for (gene in genes){
++   if (!(gene %in% significant_genes_final)){
++     print(paste0(c(gene, " not found significant in original test")))
++     genes_not_in_original = c(genes_not_in_original, gene)
++   }
++   
++ }
+[1] "NKAPL"                                  
+[2] " not found significant in original test"
+[1] "AX747088"                               
+[2] " not found significant in original test"
+
+> significant_genes_not_significant_in_test_1_not_her2 = genes_not_in_original
+
+> "Each SUBTYPE VS LARGE NORMAL DATASET"
+[1] "Each SUBTYPE VS LARGE NORMAL DATASET"
+
+> "TN"
+[1] "TN"
+
+> significant_genes_TN_large_dataset =  compareTwoCategories(processed_test_normal, 
++                                             normal_test_data, 
++                                             processedTN,
++                                             TN, .05, "TN_diff")
+[1] "ALPHA 4.29184549356223e-05"
+# A tibble: 959 x 2
+   Gene        p_value
+   <chr>         <dbl>
+ 1 MIR21    0.00000178
+ 2 PRELP    0.00000178
+ 3 GPNMB    0.00000178
+ 4 OR2T3    0.00000178
+ 5 DM119512 0.00000178
+ 6 AKR1C3   0.00000178
+ 7 OR2T34   0.00000178
+ 8 FAM180A  0.00000178
+ 9 OR2G2    0.00000178
+10 OR10X1   0.00000178
+# ... with 949 more rows
+
+> "HER2"
+[1] "HER2"
+
+> significant_genes_HER2_large_dataset =  compareTwoCategories(processed_test_normal, 
++                                             normal_test_data, 
++                                             processedHER2,
++                                             HER2, .05, "HER2_diff")
+[1] "ALPHA 4.72143531633617e-05"
+# A tibble: 878 x 2
+   Gene            p_value
+   <chr>             <dbl>
+ 1 MIR21        0.00000178
+ 2 DM119512     0.00000178
+ 3 GPNMB        0.00000178
+ 4 C6orf62      0.00000178
+ 5 HRCT1        0.00000178
+ 6 FAM180A      0.00000178
+ 7 LOC100271702 0.00000178
+ 8 SELENBP1     0.00000178
+ 9 AKR1C3       0.00000178
+10 LOC150622    0.00000178
+# ... with 868 more rows
+
+> "LuminalA"
+[1] "LuminalA"
+
+> significant_genes_LuminalA_large_dataset =  compareTwoCategories(processed_test_normal, 
++                                             normal_test_data, 
++                                             processedLuminalA,
++                                             LuminalA, .05, "LuminalA_diff")
+[1] "ALPHA 3.70919881305638e-05"
+# A tibble: 1,195 x 2
+   Gene         p_value
+   <chr>          <dbl>
+ 1 MIR21    0.000000433
+ 2 DM119512 0.000000433
+ 3 AKR1C3   0.000000433
+ 4 CD1C     0.000000433
+ 5 FCRL2    0.000000448
+ 6 PRELP    0.000000433
+ 7 C6orf62  0.000000433
+ 8 OR2T3    0.000000433
+ 9 C9orf29  0.000000433
+10 GPNMB    0.000000433
+# ... with 1,185 more rows
+
+> "LuminalB"
+[1] "LuminalB"
+
+> significant_genes_LuminalB_large_dataset =  compareTwoCategories(processed_test_normal, 
++                                             normal_test_data, 
++                                             processedLuminalB,
++                                             LuminalB, .05, "LuminalB_diff")
+[1] "ALPHA 2.49376558603491e-05"
+# A tibble: 1,849 x 2
+   Gene        p_value
+   <chr>         <dbl>
+ 1 MIR21    0.00000178
+ 2 FCRL2    0.00000178
+ 3 DM119512 0.00000178
+ 4 CD5L     0.00000178
+ 5 AKR1C3   0.00000178
+ 6 OR6Y1    0.00000178
+ 7 CD1C     0.00000178
+ 8 GPNMB    0.00000178
+ 9 PRELP    0.00000178
+10 ITIH2    0.00000178
+# ... with 1,839 more rows
+
+> "luminalHER2"
+[1] "luminalHER2"
+
+> significant_genes_luminalHER2_large_dataset =  compareTwoCategories(processed_test_normal, 
++                                             normal_test_data, 
++                                             processedLuminalHER2,
++                                             luminalHER2, .05, "luminalHER2_diff")                                            
+[1] "ALPHA 2.81214848143982e-05"
+# A tibble: 1,540 x 2
+   Gene            p_value
+   <chr>             <dbl>
+ 1 MIR21        0.00000178
+ 2 DM119512     0.00000178
+ 3 AKR1C3       0.00000178
+ 4 PRELP        0.00000178
+ 5 AK097585     0.00000178
+ 6 CD1C         0.00000178
+ 7 LOC100271702 0.00000178
+ 8 C9orf29      0.00000178
+ 9 C6orf62      0.00000178
+10 ABCA8        0.00000178
+# ... with 1,530 more rows
+
+> "EACH SUBTYPE VS SUBTYPE DATASET"
+[1] "EACH SUBTYPE VS SUBTYPE DATASET"
+
+> "TN"
+[1] "TN"
+
+> significant_genes_TN =  compareTwoCategories(processedNormal, 
++                                             normalBreast, 
++                                             processedTN,
++                                             TN, .05, "TN_diff")
+[1] "ALPHA 0.000574712643678161"
+# A tibble: 0 x 2
+# ... with 2 variables: Gene <chr>, p_value <dbl>
+
+> "HER2"
+[1] "HER2"
+
+> significant_genes_HER2 =  compareTwoCategories(processedNormal, 
++                                             normalBreast, 
++                                             processedHER2,
++                                             HER2, .05, "HER2_diff")
+[1] "ALPHA 0.00104166666666667"
+# A tibble: 5 x 2
+  Gene    p_value
+  <chr>     <dbl>
+1 ZNF660 0.000666
+2 CPXM1  0.000666
+3 NPY    0.000666
+4 FBXO39 0.000666
+5 ZNF177 0.000666
+
+> "LuminalA"
+[1] "LuminalA"
+
+> significant_genes_LuminalA =  compareTwoCategories(processedNormal, 
++                                             normalBreast, 
++                                             processedLuminalA,
++                                             LuminalA, .05, "LuminalA_diff")
+[1] "ALPHA 0.000420168067226891"
+# A tibble: 29 x 2
+   Gene       p_value
+   <chr>        <dbl>
+ 1 MIR100    0.000400
+ 2 SYCP2     0.000400
+ 3 PLEKHG7   0.000400
+ 4 HMGA1P7   0.000400
+ 5 CDH26     0.000400
+ 6 TIGIT     0.000400
+ 7 LOC727677 0.000400
+ 8 ZMYND17   0.000400
+ 9 OR2S2     0.000400
+10 ALDH1A1   0.000400
+# ... with 19 more rows
+
+> "LuminalB"
+[1] "LuminalB"
+
+> significant_genes_LuminalB =  compareTwoCategories(processedNormal, 
++                                             normalBreast, 
++                                             processedLuminalB,
++                                             LuminalB, .05, "LuminalB_diff")
+[1] "ALPHA 9.05797101449275e-05"
+# A tibble: 0 x 2
+# ... with 2 variables: Gene <chr>, p_value <dbl>
+
+> "luminalHER2"
+[1] "luminalHER2"
+
+> significant_genes_luminalHER2 =  compareTwoCategories(processedNormal, 
++                                             normalBreast, 
++                                             processedLuminalHER2,
++                                             luminalHER2, .05, "luminalHER2_diff")   
+[1] "ALPHA 0.000109170305676856"
+# A tibble: 0 x 2
+# ... with 2 variables: Gene <chr>, p_value <dbl>
+
+> "CREATE FILES FOR LATER ANALYSIS"
+[1] "CREATE FILES FOR LATER ANALYSIS"
+
+> generate_one_v_all_diff_file = function(data1, filename, exclude) {
++         data1_HER2 = compareTwo(data1, processedHER2)
++         data1_LUM_A = compareTwo(data1, processedLuminalA)
++         data1_LUM_B = compareTwo(data1, processedLuminalB)
++         data1_TN = compareTwo(data1, processedTN)
++         data1_LUM_HER2 = compareTwo(data1, processedLuminalHER2)
++         data1_InVitro = compareTwo(data1, processedInVitro)
++         data1_NORMAL = compareTwo(data1, processedNormal)
++ 
++         data1_NORMAL = rename(data1_NORMAL, NORM_diff = diff)
++         data1_TN = rename(data1_TN, TN_diff = diff)
++         data1_LUM_A = rename(data1_LUM_A, LuminalA_diff = diff)
++         data1_LUM_B = rename(data1_LUM_B, LuminalB_diff = diff)
++         data1_LUM_HER2 = rename(data1_LUM_HER2, Luminal_HER2_diff = diff)
++         data1_HER2 = rename(data1_HER2, HER2_diff = diff)
++         data1_InVitro = rename(data1_InVitro, InVitro_diff = diff)
++         data_joined = list(data1_NORMAL, data1_TN, data1_LUM_A, data1_LUM_B, data1_LUM_HER2, data1_HER2,data1_InVitro ) %>% reduce(full_join)
++ 
++         write_tsv(
++         data_joined,
++         filename)
++ }
+
+> #Results from confirmation test
+> write_tsv(
++   joined_final_results_confirmation_test,
++   'out/test_1_results/results_confirmation_test.tsv'
++ )
+
+> write_tsv(
++   significant_genes_all_types,
++   'out/test_3_results/significant_genes_all_types.tsv'
++ )
+
+> #Save Processed Data
+> write_tsv(
++   processedHER2,
++   'out/test_3_results/sumarized_data/HER2.tsv')
+
+> write_tsv(
++   processedLuminalA,
++   'out/test_3_results/sumarized_data/LuminalA.tsv')
+
+> write_tsv(
++   processedLuminalB,
++   'out/test_3_results/sumarized_data/LuminalB.tsv')
+
+> write_tsv(
++   processedLuminalHER2,
++   'out/test_3_results/sumarized_data/LuminalHER2.tsv')
+
+> write_tsv(
++   processedNormal,
++   'out/test_3_results/sumarized_data/test_3_results/Normal.tsv')

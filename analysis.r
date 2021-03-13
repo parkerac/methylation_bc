@@ -115,7 +115,7 @@ for (gene in genes){
   
 }
 print(genes_not_in_original)
-
+significant_genes_not_significant_in_test_1 = genes_not_in_original
 "Perform Statistical Analysis against original data"
 
 "Test Data Set"
@@ -164,8 +164,41 @@ for (gene in genes){
   
 }
 
+significant_genes_not_significant_in_test_1_not_her2 = genes_not_in_original
 
-"EACH SUBTYPE"
+"Each SUBTYPE VS LARGE NORMAL DATASET"
+
+"TN"
+significant_genes_TN_large_dataset =  compareTwoCategories(processed_test_normal, 
+                                            normal_test_data, 
+                                            processedTN,
+                                            TN, .05, "TN_diff")
+"HER2"
+significant_genes_HER2_large_dataset =  compareTwoCategories(processed_test_normal, 
+                                            normal_test_data, 
+                                            processedHER2,
+                                            HER2, .05, "HER2_diff")
+
+"LuminalA"
+significant_genes_LuminalA_large_dataset =  compareTwoCategories(processed_test_normal, 
+                                            normal_test_data, 
+                                            processedLuminalA,
+                                            LuminalA, .05, "LuminalA_diff")
+
+"LuminalB"
+significant_genes_LuminalB_large_dataset =  compareTwoCategories(processed_test_normal, 
+                                            normal_test_data, 
+                                            processedLuminalB,
+                                            LuminalB, .05, "LuminalB_diff")
+
+"luminalHER2"
+significant_genes_luminalHER2_large_dataset =  compareTwoCategories(processed_test_normal, 
+                                            normal_test_data, 
+                                            processedLuminalHER2,
+                                            luminalHER2, .05, "luminalHER2_diff")                                            
+
+"EACH SUBTYPE VS SUBTYPE DATASET"
+
 "TN"
 significant_genes_TN =  compareTwoCategories(processedNormal, 
                                             normalBreast, 
@@ -193,7 +226,7 @@ significant_genes_LuminalB =  compareTwoCategories(processedNormal,
 significant_genes_luminalHER2 =  compareTwoCategories(processedNormal, 
                                             normalBreast, 
                                             processedLuminalHER2,
-                                            luminalHER2, .05, "luminalHER2_diff")                                            
+                                            luminalHER2, .05, "luminalHER2_diff")   
 
 "CREATE FILES FOR LATER ANALYSIS"
 
@@ -223,129 +256,163 @@ generate_one_v_all_diff_file = function(data1, filename, exclude) {
 #Results from confirmation test
 write_tsv(
   joined_final_results_confirmation_test,
-  'out/results_confirmation_test.tsv'
+  'out/test_1_results/results_confirmation_test.tsv'
 )
 
 write_tsv(
   significant_genes_all_types,
-  'out/significant_genes_all_types.tsv'
+  'out/test_3_results/significant_genes_all_types.tsv'
 )
 
 #Save Processed Data
 write_tsv(
   processedHER2,
-  'out/HER2.tsv')
+  'out/test_3_results/sumarized_data/HER2.tsv')
 
 write_tsv(
   processedLuminalA,
-  'out/LuminalA.tsv')
+  'out/test_3_results/sumarized_data/LuminalA.tsv')
 
 write_tsv(
   processedLuminalB,
-  'out/LuminalB.tsv')
+  'out/test_3_results/sumarized_data/LuminalB.tsv')
 
 write_tsv(
   processedLuminalHER2,
-  'out/LuminalHER2.tsv')
+  'out/test_3_results/sumarized_data/LuminalHER2.tsv')
 
 write_tsv(
   processedNormal,
-  'out/Normal.tsv')
+  'out/test_3_results/sumarized_data/Normal.tsv')
 
 write_tsv(
   processedTN,
-  'out/TN.tsv')
+  'out/test_3_results/sumarized_data/TN.tsv')
 
 write_tsv(
   processedInVitro,
-  'out/InVitro.tsv')
+  'out/test_3_results/sumarized_data/InVitro.tsv')
 
 #Save all common genes compared to normal
 write_tsv(
   common_genes_all,
-  'out/common_genes_all_vs_normal.tsv')
+  'out/test_3_results/common_genes_all_vs_normal.tsv')
 
 
 write_tsv(
   common_genes_not_her2, 
-  'out/common_genes_not_her2.tsv'
+  'out/test_3_results/common_genes_not_her2.tsv'
 )
 
 write_tsv(
   significant_gwas_genes_summary,
-  'out/significant_gwas_genes_summary.tsv'
+  'out/test_2_results/significant_gwas_genes_summary.tsv'
 )
 
 write_tsv(
   significant_genes_all_types_not_her2, 
-  'out/significant_genes_all_types_not_her2.tsv'
+  'out/test_3_results/significant_genes_all_types_not_her2.tsv'
 )
 write_tsv(
   general_gwas_genes,
-  'out/general_gwas_genes.tsv'
+  'out/test_2_results/general_gwas_genes.tsv'
 )
 write_tsv(
   normal_gwas_genes,
-  'out/normal_gwas_genes.tsv'
+  'out/test_2_results/normal_gwas_genes.tsv'
 )
 write_tsv(
   confirm_gwas_genes,
-  'out/confirm_gwas_genes.tsv'
+  'out/test_2_results/confirm_gwas_genes.tsv'
 )
 write_tsv(
   subtypes_gwas_genes,
-  'out/subtypes_gwas_genes.tsv'
+  'out/test_2_results/subtypes_gwas_genes.tsv'
 )
-subtypes_gwas_genes
 #HER2 vs all
 
-generate_one_v_all_diff_file(processedHER2, "out/her2_vs_all.tsv", "HER2")
+generate_one_v_all_diff_file(processedHER2, "out/test_3_results/other_out_files/her2_vs_all.tsv", "HER2")
 
 #LuminalA vs all
 
-generate_one_v_all_diff_file(processedLuminalA, "out/lum_a_vs_all.tsv", "LUM_A")
+generate_one_v_all_diff_file(processedLuminalA, "out/test_3_results/other_out_files/lum_a_vs_all.tsv", "LUM_A")
 
 #LuminalB vs all
 
-generate_one_v_all_diff_file(processedLuminalB, "out/lum_b_vs_all.tsv", "LUM_B")
+generate_one_v_all_diff_file(processedLuminalB, "out/test_3_results/other_out_files/lum_b_vs_all.tsv", "LUM_B")
 
 #Luminal HER2 vs all
 
-generate_one_v_all_diff_file(processedLuminalHER2, "out/lum_her2_vs_all.tsv", "LUM_HER2")
+generate_one_v_all_diff_file(processedLuminalHER2, "out/test_3_results/other_out_files/lum_her2_vs_all.tsv", "LUM_HER2")
 
 #Normal vs all
 
-generate_one_v_all_diff_file(processedNormal, "out/normal_vs_all.tsv", "NORMAL")
+generate_one_v_all_diff_file(processedNormal, "out/test_3_results/other_out_files/normal_vs_all.tsv", "NORMAL")
 
 #TN vs all
 
-generate_one_v_all_diff_file(processedTN, "out/TN_vs_all.tsv", "TN")
+generate_one_v_all_diff_file(processedTN, "out/test_3_results/other_out_files/TN_vs_all.tsv", "TN")
 
 #Invitro vs all
 
-generate_one_v_all_diff_file(processedInVitro, "out/invitro_vs_all.tsv", "INVITRO")
+generate_one_v_all_diff_file(processedInVitro, "out/test_3_results/other_out_files/invitro_vs_all.tsv", "INVITRO")
 
 
 "EACH SUBTYPE SIGNIFICANT GENES"
 
 write_tsv(
   significant_genes_TN,
-  'out/significant_genes_TN.tsv'
+  'out/test_3_results/significant_genes_TN.tsv'
 )
 write_tsv(
   significant_genes_HER2,
-  'out/significant_genes_HER2.tsv'
+  'out/test_3_results/significant_genes_HER2.tsv'
 )
 write_tsv(
   significant_genes_LuminalA,
-  'out/significant_genes_LuminalA.tsv'
+  'out/test_3_results/significant_genes_LuminalA.tsv'
 )
 write_tsv(
   significant_genes_LuminalB,
-  'out/significant_genes_LuminalB.tsv'
+  'out/test_3_results/significant_genes_LuminalB.tsv'
 )
 write_tsv(
   significant_genes_luminalHER2,
-  'out/significant_genes_luminalHER2.tsv'
+  'out/test_3_results/significant_genes_luminalHER2.tsv'
 )
                                   
+"EACH SUBTYPE SIGNIFICANT GENES"
+
+write_tsv(
+  significant_genes_TN_large_dataset,
+  'out/test_3_results/significant_genes_TN_large_dataset.tsv'
+)
+write_tsv(
+  significant_genes_HER2_large_dataset,
+  'out/test_3_results/significant_genes_HER2_large_dataset.tsv'
+)
+write_tsv(
+  significant_genes_LuminalA_large_dataset,
+  'out/test_3_results/significant_genes_LuminalA_large_dataset.tsv'
+)
+write_tsv(
+  significant_genes_LuminalB_large_dataset,
+  'out/test_3_results/significant_genes_LuminalB_large_dataset.tsv'
+)
+write_tsv(
+  significant_genes_luminalHER2_large_dataset,
+  'out/test_3_results/significant_genes_luminalHER2_large_dataset.tsv'
+)
+
+missing_genes = tibble(Gene=significant_genes_not_significant_in_test_1)
+missing_genes_not_her_2 = tibble(Gene=significant_genes_not_significant_in_test_1_not_her2)
+
+write_tsv(
+  missing_genes,
+  'out/test_3_results/common_genes_all_missing_from_test1.tsv'
+)
+
+write_tsv(
+  missing_genes_not_her_2,
+  'out/test_3_results/common_genes_all_minus_her2_missing_from_test1.tsv'
+)

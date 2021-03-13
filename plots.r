@@ -1,5 +1,5 @@
 library('tidyverse')
-common_genes_all = read_tsv('out/common_genes_all_vs_normal.tsv')
+common_genes_all = read_tsv('out/test_3_results/raw_data/common_genes_all_vs_normal.tsv')
 print(common_genes_all)
 "PLOTS"
 
@@ -14,7 +14,7 @@ plot <- ggplot(common_genes_all, aes(x=Category, y=Value)) +
   labs(fill = "Cancer Subtypes")
 plot
 
-common_genes_all = read_tsv('out/common_genes_not_her2.tsv')
+common_genes_all = read_tsv('out/test_3_results/raw_data/common_genes_not_her2.tsv')
 print(common_genes_all)
 "PLOTS"
 
