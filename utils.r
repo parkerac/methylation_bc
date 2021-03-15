@@ -20,21 +20,29 @@ rename_categories = function(data){
 }
 
 
-performTwoWayStatisticalAnalysis = function(data, genes, corrected_alpha=.01){
-        results = tibble(Gene = character(), p_value = numeric())
+performTwoWayStatisticalAnalysis = function(data, genes, corrected_alpha=.01, process_data, colname){
+        results = tibble(Gene = character(), p_value = numeric(), diff = numeric())
         for (gene in genes){
-                stat_data = filter(data, Gene == gene)
-                p_value = wilcox.test(Value ~ Category, data=stat_data)$p.value
-                if (p_value < corrected_alpha){
-                        results = results %>% add_row(Gene = gene, p_value = p_value)
+                stat_data = filter(data, Gene == gene) %>% mutate(Category = as.factor(Category))
+                # view(stat_data)
+                if (dim(stat_data)[1] == 0){
+                }
+                else {
+                        p_value = wilcox.test(Value ~ Category, data=stat_data)$p.value
+                        if (p_value < corrected_alpha){
+                                diff = filter(process_data, Gene == gene)$diff
+                                results = results %>% add_row(Gene = gene, p_value = p_value, diff = diff)
+                        }
                 }
         }
+        
+        results = rename(results, !!colname := diff)
+
         return(results)
 }
 
-compareTwoCategories = function(data1, rawData1, data2, rawData2, alpha, colname){
-        data1_vs_data2 = compareTwo(data1, data2)
-        data1_vs_data2 = rename(data1_vs_data2, !!colname := diff)
+compareTwoCategories = function(data1, rawData1, data2, rawData2, alpha, colname, threshold = .3){
+        data1_vs_data2 = compareTwo(data1, data2, threshold)
         genes_test = pull(data1_vs_data2, Gene)
 
         filtered_data1 = filter(rawData1, Gene %in% genes_test) 
@@ -42,9 +50,14 @@ compareTwoCategories = function(data1, rawData1, data2, rawData2, alpha, colname
         joined_test = bind_rows(filtered_data1, filtered_data2) %>% mutate(Category = as.factor(Category))
 
         "Perform Statistical Analysis"
-        corrected_alpha = alpha/length(genes_test)
+        if (alpha < 0){
+                corrected_alpha = 100
+        }
+        else {
+                corrected_alpha = alpha/length(genes_test)
+        }
         print(paste0("ALPHA ", corrected_alpha))
-        significant_genes_test = performTwoWayStatisticalAnalysis(joined_test, genes_test, corrected_alpha)
+        significant_genes_test = performTwoWayStatisticalAnalysis(joined_test, genes_test, corrected_alpha,data1_vs_data2, colname)
         print(significant_genes_test)
         return(significant_genes_test)
 }
@@ -74,8 +87,14 @@ performStatisticalAnalysis = function(data, genes, alpha = .05){
         for (gene in genes){
                 print(paste("Statistical test for ", gene))
                 result = statisticalAnalysis(data, gene)
-                table = addToTable(table, result, gene, alpha)
-                print(result)
+                if (result == "NOT STATISTICALY DIFFERENT"){
+                        print(result)
+                        
+                }
+                else {
+                        table = addToTable(table, result, gene, alpha)
+                        print(result)
+                }
         }
         return(table)
 }
@@ -95,9 +114,10 @@ statisticalAnalysis = function(data, gene, alpha = .05){
 
 
 
-process_data = function(data) {
+process_data = function(data, category) {
         data %>% group_by(Gene) %>% 
                 summarise(average=mean(Value), median=median(Value), 
+                Category = category,
                 min=min(Value), max=max(Value),
                 Q1 = quantile(Value, .25, na.rm = TRUE), 
                 Q3 = quantile(Value, .75, na.rm = TRUE),
