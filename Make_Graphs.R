@@ -23,8 +23,14 @@ results_confirmation = read_tsv("test_1_results/significant_genes/significant_ge
 results_gwas = read_tsv("test_2_results/sumarized_data/significant_genes/significant_gwas_genes_summary.tsv")
 results_gwas_subtypes = read_tsv("test_2_results/raw_data/subtypes_gwas_genes.tsv")
 raw_subtypes = read_tsv("test_3_results/raw_data/common_genes_all_vs_normal.tsv")
+common_genes_all = read_tsv("test_3_results/raw_data/common_genes_not_her2.tsv")
 
 gwas_genes = read_tsv("../../genes.tsv")
+
+subtype_normal_patients = raw_subtypes %>%
+  filter(Category == "Normal") %>%
+  mutate(Patient_ID = str_c(Accession, Patient_ID, sep = "_")) %>%
+  pull(Patient_ID)
 
 dir.create("../../Plots")
 setwd("../../Plots")
@@ -52,7 +58,7 @@ all_scatter_data = hist_data %>%
 ggsave("all_scatter_plot.png", all_scatter_plot)
 
 # Density plot of all methylation values faceted by dataset
-(density_plot = ggplot(data_all, aes(x = Value)) +
+(density_plot = ggplot(data_all %>% filter(!(Patient_ID %in% subtype_normal_patients)), aes(x = Value)) +
     geom_density(mapping = aes(y = ..scaled..)) +
     facet_wrap(~Dataset) +
     theme_bw() +
@@ -83,8 +89,8 @@ greatest_diffs = data_all %>%
   group_by(Gene) %>%
   summarize(Median = median(Value)) %>%
   left_join(data_normal %>% filter(Gene %in% gwas_genes$Gene) %>% group_by(Gene) %>% summarize(Normal_Median = median(Value))) %>%
-  mutate(Difference = Median - Normal_Median) %>%
-  arrange(desc(Difference)) %>%
+  mutate(Abs_Difference = abs(Median - Normal_Median)) %>%
+  arrange(desc(Abs_Difference)) %>%
   head(10) %>%
   pull(Gene)
 line_data = data_all %>%
@@ -95,7 +101,7 @@ line_data = data_all %>%
 (line_plot = ggplot(line_data, aes(x = Gene, y = Median, group = Dataset, color = Dataset)) +
     geom_line() +
     theme_bw() +
-    theme(axis.text = element_text(size = 8, angle = 25, hjust = 1)))
+    theme(axis.text.x = element_text(size = 8, angle = 25, hjust = 1)))
 ggsave("line_plot.png", line_plot)
 
 # Boxplot of genes with greatest differences between datasets
@@ -135,19 +141,14 @@ box_data = data_all %>%
 ggsave("box_plot.png", box_plot)
 
 
-# Box plot of all significant gwas genes for subtypes
-set.seed(6)
-subtypes = raw_subtypes %>%
-  mutate(Patient_ID = paste(Accession, Patient_ID, sep = "_")) %>%
-  select(Patient_ID, Category)
-subtype_box_data = data_subtypes %>%
-  filter(Gene %in% sample(data_subtypes$Gene, 6)) %>%
-  left_join(subtypes) %>%
-  filter(!is.na(Category)) %>%
+# Box plot of all significant genes for subtypes
+subtype_box_data = common_genes_all %>%
   mutate(Category = factor(Category, levels = c("TN", "HER2", "Luminal A", "Luminal B", "Luminal-HER2", "Normal")))
-(subtypes_box_plot = ggplot(subtype_box_data, aes(x = Category, y = Value, fill = Category)) +
-    geom_boxplot() +
-    facet_wrap(~Gene) +
-    theme_bw() +
-    theme(axis.text.x = element_blank()))#element_text(size = 8, angle = 25, hjust = 1)))
+(subtypes_box_plot = ggplot(subtype_box_data, aes(x = Category, y = Value)) + 
+    geom_boxplot(aes(fill = Category)) + 
+    theme_bw() + 
+    theme(axis.title.x = element_blank(),
+          axis.text.x = element_blank(),
+          axis.ticks.x = element_blank()) + 
+    facet_wrap(~Gene))
 ggsave("subtypes_box_plot.png", subtypes_box_plot)
