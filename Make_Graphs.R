@@ -1,4 +1,8 @@
+#BiocManager::install("EnhancedVolcano")
+
 library(tidyverse)
+library(EnhancedVolcano)
+
 setwd("~/Documents/BC_Files")
 data_general = read_tsv("GSE72308_RAW_Methylation_Analysis_Data.txt")
 data_confirm = read_tsv("GSE84207_RAW_Methylation_Analysis_Data.txt")
@@ -20,11 +24,15 @@ data_all = list(data_general, data_confirm, data_subtypes, data_normal) %>%
 
 setwd("~/Google Drive (alyssaclaire31@gmail.com)/Winter 2021/BIO 463/out/organized_out_files/")
 results_confirmation = read_tsv("test_1_results/significant_genes/significant_genes/results_confirmation_test.tsv")
-results_gwas = read_tsv("test_2_results/sumarized_data/significant_genes/significant_gwas_genes_summary.tsv")
-results_gwas_subtypes = read_tsv("test_2_results/raw_data/subtypes_gwas_genes.tsv")
 raw_subtypes = read_tsv("test_3_results/raw_data/common_genes_all_vs_normal.tsv")
+common_genes_all = read_tsv("test_3_results/raw_data/common_genes_not_her2.tsv")
 
 gwas_genes = read_tsv("../../genes.tsv")
+
+subtype_normal_patients = raw_subtypes %>%
+  filter(Category == "Normal") %>%
+  mutate(Patient_ID = str_c(Accession, Patient_ID, sep = "_")) %>%
+  pull(Patient_ID)
 
 dir.create("../../Plots")
 setwd("../../Plots")
@@ -44,6 +52,37 @@ ggsave("hist_plot.png", hist_plot)
 all_scatter_data = hist_data %>%
   rename(Difference = value) %>%
   pivot_longer(c(p_value_test_1, p_value_test_2), names_to = "P_Value_Category")
+
+png("volcano_general.png")
+EnhancedVolcano(all_output, all_output$Gene, x = "general_diff", y = "p_value_test_1", title = "General Comparison", 
+                subtitle = element_blank(), pCutoff = 9.425e-5, FCcutoff = 0.3,
+                xlab = "Methylation beta change", pointSize = 1, caption = "Total = 22,579 genes",
+                legendPosition = "bottom", legendLabels = c("not significant", "beta change", "p-value", "p-value and beta change"))
+dev.off()
+
+png("volcano_confirm.png")
+EnhancedVolcano(all_output, all_output$Gene, x = "confirm_diff", y = "p_value_test_2", title = "Confirm Comparison", 
+                subtitle = element_blank(), pCutoff = 8.012e-6, FCcutoff = 0.3,
+                xlab = "Methylation beta change", pointSize = 1, caption = "Total = 22,579 genes",
+                legendPosition = "bottom", legendLabels = c("not significant", "beta change", "p-value", "p-value and beta change"))
+dev.off()
+
+num_inc_sig_1 = all_output %>%
+  filter(general_diff > 0.3 & p_value_test_1 < 9.425e-5) %>%
+  nrow()
+
+num_dec_sig_1 = all_output %>%
+  filter(general_diff < -0.3 & p_value_test_1 < 9.425e-5) %>%
+  nrow()
+
+num_inc_sig_2 = all_output %>%
+  filter(confirm_diff > 0.3 & p_value_test_2 < 8.012e-6) %>%
+  nrow()
+
+num_dec_sig_2 = all_output %>%
+  filter(confirm_diff < -0.3 & p_value_test_2 < 8.012e-6) %>%
+  nrow()
+
 (all_scatter_plot = ggplot(all_scatter_data, aes(x = Gene, y = Difference, color = Gene %in% results_confirmation$Gene)) +
     scale_colour_manual(values = setNames(c('red','black'), c(T, F))) +
     geom_jitter(size = .5) +
@@ -52,7 +91,7 @@ all_scatter_data = hist_data %>%
 ggsave("all_scatter_plot.png", all_scatter_plot)
 
 # Density plot of all methylation values faceted by dataset
-(density_plot = ggplot(data_all, aes(x = Value)) +
+(density_plot = ggplot(data_all %>% filter(!(Patient_ID %in% subtype_normal_patients)), aes(x = Value)) +
     geom_density(mapping = aes(y = ..scaled..)) +
     facet_wrap(~Dataset) +
     theme_bw() +
@@ -76,29 +115,31 @@ ggsave("scatter_plot_1.png", scatter_plot_1)
 ggsave("scatter_plot_2.png", scatter_plot_2)
 
 # Line graph of genes with shared changes across datasets
-set.seed(0)
 greatest_diffs = data_all %>%
   filter(Dataset != "Normal") %>%
   filter(Gene %in% gwas_genes$Gene) %>%
   group_by(Gene) %>%
   summarize(Median = median(Value)) %>%
   left_join(data_normal %>% filter(Gene %in% gwas_genes$Gene) %>% group_by(Gene) %>% summarize(Normal_Median = median(Value))) %>%
-  mutate(Difference = Median - Normal_Median) %>%
-  arrange(desc(Difference)) %>%
-  head(10) %>%
+  mutate(Abs_Difference = abs(Median - Normal_Median)) %>%
+  arrange(desc(Abs_Difference)) %>%
+  head(5) %>%
   pull(Gene)
+
 line_data = data_all %>%
   filter(Gene %in% greatest_diffs) %>%
-  filter(Dataset %in% c("Normal", "General", "Confirm")) %>%
-  group_by(Gene, Dataset) %>%
-  summarize(Median = median(Value))
+  mutate(Dataset = factor(Dataset, levels = c("General", "Confirm", "Subtypes", "Normal")))
+(violin_plot = ggplot(line_data, aes(x = Gene, y = Value)) +
+  geom_violin() +
+  facet_wrap(~ Dataset))
+ggsave("violin_plot.png", violin_plot)
+
+
 (line_plot = ggplot(line_data, aes(x = Gene, y = Median, group = Dataset, color = Dataset)) +
     geom_line() +
     theme_bw() +
-    theme(axis.text = element_text(size = 8, angle = 25, hjust = 1)))
+    theme(axis.text.x = element_text(size = 8, angle = 25, hjust = 1)))
 ggsave("line_plot.png", line_plot)
-
-# Boxplot of genes with greatest differences between datasets
 
 # Bar graph of change values faceted by dataset
 determine_category = function(general_positive, confirm_positive) {
@@ -135,19 +176,14 @@ box_data = data_all %>%
 ggsave("box_plot.png", box_plot)
 
 
-# Box plot of all significant gwas genes for subtypes
-set.seed(6)
-subtypes = raw_subtypes %>%
-  mutate(Patient_ID = paste(Accession, Patient_ID, sep = "_")) %>%
-  select(Patient_ID, Category)
-subtype_box_data = data_subtypes %>%
-  filter(Gene %in% sample(data_subtypes$Gene, 6)) %>%
-  left_join(subtypes) %>%
-  filter(!is.na(Category)) %>%
+# Box plot of all significant genes for subtypes
+subtype_box_data = common_genes_all %>%
   mutate(Category = factor(Category, levels = c("TN", "HER2", "Luminal A", "Luminal B", "Luminal-HER2", "Normal")))
-(subtypes_box_plot = ggplot(subtype_box_data, aes(x = Category, y = Value, fill = Category)) +
-    geom_boxplot() +
-    facet_wrap(~Gene) +
-    theme_bw() +
-    theme(axis.text.x = element_blank()))#element_text(size = 8, angle = 25, hjust = 1)))
+(subtypes_box_plot = ggplot(subtype_box_data, aes(x = Category, y = Value)) + 
+    geom_boxplot(aes(fill = Category)) + 
+    theme_bw() + 
+    theme(axis.title.x = element_blank(),
+          axis.text.x = element_blank(),
+          axis.ticks.x = element_blank()) + 
+    facet_wrap(~Gene))
 ggsave("subtypes_box_plot.png", subtypes_box_plot)

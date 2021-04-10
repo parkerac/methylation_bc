@@ -1,0 +1,43 @@
+library('tidyverse')
+data = read_tsv('out/significant_genes_test_1.tsv')
+
+#General
+positive_general = pull(filter(data, general_diff > 0), general_diff)
+median(positive_general)
+sd(positive_general)
+length(positive_general)
+negative_general = pull(filter(data, general_diff < 0), general_diff)
+median(negative_general)
+sd(negative_general)
+length(negative_general)
+
+data = read_tsv('out/significant_genes_test_2.tsv')
+#Confirm
+positive_confirm = pull(filter(data, confirm_diff > 0), confirm_diff)
+median(positive_confirm)
+sd(positive_confirm)
+length(positive_confirm)
+negative_confirm = pull(filter(data, confirm_diff < 0), confirm_diff)
+median(negative_confirm)
+sd(negative_confirm)
+length(negative_confirm)
+
+data = read_tsv('out/results_confirmation_test.tsv')
+#General
+positive_general = pull(filter(data, general_diff > 0), general_diff)
+median(positive_general)
+sd(positive_general)
+length(positive_general)
+negative_general = pull(filter(data, general_diff < 0), general_diff)
+median(negative_general)
+sd(negative_general)
+length(negative_general)
+#Confirm
+positive_confirm = pull(filter(data, confirm_diff > 0), confirm_diff)
+median(positive_confirm)
+sd(positive_confirm)
+length(positive_confirm)
+negative_confirm = pull(filter(data, confirm_diff < 0), confirm_diff)
+median(negative_confirm)
+sd(negative_confirm)
+length(negative_confirm)

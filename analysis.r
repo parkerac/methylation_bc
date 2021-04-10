@@ -16,9 +16,10 @@ processed_general = process_data(general_test_data, 'General')
 
 
 "Compare First Dataset to Normal"
-general_vs_normal = compareTwo(processed_test_normal, processed_general)
+general_vs_normal = compareTwo(processed_general, processed_test_normal)
 general_vs_normal = rename(general_vs_normal, general_diff = diff)
-significant_genes_test_1 = compareTwoCategories(processed_test_normal, normal_test_data, processed_general, general_test_data, .01, "general_diff")
+significant_genes_test_1 = compareTwoCategories( processed_general, general_test_data,processed_test_normal, normal_test_data, .01, "general_diff")
+print(paste0(c("Number of Genes", length(unique(pull(significant_genes_test_1, Gene))))))
 
 #Confirm Results
 "Prepare Data"
@@ -27,18 +28,21 @@ confirm_test_data = mutate(raw_confirm, Category = 'Confirm')
 processed_confirm = process_data(confirm_test_data, 'Confirm')
 
 "Compare Second Dataset to Normal"
-confirm_vs_normal = compareTwo(processed_test_normal, processed_confirm)
+confirm_vs_normal = compareTwo(processed_confirm, processed_test_normal)
 confirm_vs_normal = rename(confirm_vs_normal, confirm_diff = diff)
-significant_genes_test_2 =  compareTwoCategories(processed_test_normal, normal_test_data, processed_confirm, confirm_test_data, .01, "confirm_diff")
-
+significant_genes_test_2 =  compareTwoCategories( processed_confirm, confirm_test_data,processed_test_normal, normal_test_data, .01, "confirm_diff")
+print(paste0(c("Number of Genes", length(unique(pull(significant_genes_test_2, Gene))))))
 "Combine Results"
 significant_genes_test_1 = rename(significant_genes_test_1, p_value_test_1 = p_value)
 significant_genes_test_2 = rename(significant_genes_test_2, p_value_test_2 = p_value)
-
+write_tsv(significant_genes_test_1, 'out/general_results.tsv')
+write_tsv(significant_genes_test_2, 'out/confirm_results.tsv')
 joined_final_results = inner_join(significant_genes_test_1,significant_genes_test_2)
 joined = inner_join(joined_final_results, general_vs_normal)
 joined_final_results_confirmation_test = inner_join(joined, confirm_vs_normal)
 print(joined_final_results_confirmation_test)
+print(paste0(c("Number of Genes", length(unique(pull(joined_final_results_confirmation_test, Gene))))))
+
 significant_genes_final = pull(joined_final_results_confirmation_test, Gene)
 
 "TEST 2 - sub-types"
@@ -118,7 +122,7 @@ filtered_general_processed = filter(processed_general, Gene %in% genes)
 significant_genes_test_3_general =  compareTwoCategories(processed_test_normal, 
                                             normal_test_data, 
                                             filtered_general_processed,
-                                            general_test_data, .01, "General_diff", .0)
+                                            general_test_data, -1, "General_diff", .0)
 
 "Test Confirm Data Set"
 filtered_confirm_processed = filter(processed_confirm, Gene %in% genes)
@@ -128,10 +132,10 @@ significant_genes_test_3_confirm =  compareTwoCategories(processed_test_normal,
                                             confirm_test_data, .01, "Confirm_diff", .0)
 compared_to_large = inner_join(significant_genes_test_3_general, significant_genes_test_3_confirm)
 print(compared_to_large)
-write_tsv(compared_to_large, 'out/compated_to_large.tsv')
-# general_vs_normal = compareTwo(processed_test_normal, processed_general, threshold=0)
+write_tsv(compared_to_large, 'out/compared_to_large.tsv')
+# general_vs_normal = compareTwo(processed_general, processed_test_normal, threshold=0)
 # print(filter(general_vs_normal, Gene %in% genes_not_in_original))
-# confirm_vs_normal = compareTwo(processed_test_normal, processed_confirm, threshold=0)
+# confirm_vs_normal = compareTwo(processed_confirm,processed_test_normal, threshold=0)
 # print(filter(confirm_vs_normal, Gene %in% genes_not_in_original))
 
 
@@ -140,93 +144,99 @@ all_joined_not_her2 = list(TN_NORMAL, LuminalA_NORMAL, LuminalB_NORMAL, LuminalH
   reduce(inner_join)
 view(all_joined_not_her2)
 genes = all_joined_not_her2 %>% pull(Gene)
+print(genes)
 common_genes_not_her2 = filter(joined_data, Gene %in% genes) %>% filter(Category != "HER2") %>% filter(Category != "In Vitro")
 
 "STATISTICAL ANALYSIS"
 print(paste0("ALPHA ", .05 / length(genes)))
 significant_genes_all_types_not_her2 = performStatisticalAnalysis(common_genes_not_her2, genes, .05 / length(genes))
-print(significant_genes_all_types_not_her2)
+print(unique(pull(significant_genes_all_types_not_her2, Gene)))
+
 
 significant_genes_not_significant_in_test_1_not_her2 = genes_not_in_original
 
 
 filtered_normal_processed = filter(processed_test_normal, Gene %in% genes)
 filtered_general_processed = filter(processed_general, Gene %in% genes)
-significant_genes_test_3_not_her2_general =  compareTwoCategories(processed_test_normal, 
-                                            normal_test_data, 
+significant_genes_test_3_not_her2_general =  compareTwoCategories(
                                             filtered_general_processed,
-                                            general_test_data, .01, "General_diff", .0) %>% rename(p_value_general = p_value)
+                                            general_test_data,
+                                            processed_test_normal, 
+                                            normal_test_data,  .01, "General_diff", .0) %>% rename(p_value_general = p_value)
 
 "Test Confirm Data Set"
 filtered_confirm_processed = filter(processed_confirm, Gene %in% genes)
-significant_genes_test_3_not_her2_confirm =  compareTwoCategories(processed_test_normal, 
-                                            normal_test_data, 
+significant_genes_test_3_not_her2_confirm =  compareTwoCategories(
                                             filtered_confirm_processed,
-                                            confirm_test_data, .01, "Confirm_diff", .0) %>% rename(p_value_confirm = p_value)
+                                            confirm_test_data,
+                                            processed_test_normal, 
+                                            normal_test_data, 
+                                             .01, "Confirm_diff", .0) %>% rename(p_value_confirm = p_value)
 compared_to_large = inner_join(significant_genes_test_3_not_her2_general, significant_genes_test_3_not_her2_confirm)
 print(compared_to_large)
+view(compared_to_large)
 write_tsv(compared_to_large, 'out/compated_to_large_not_her2.tsv')
 "Each SUBTYPE VS LARGE NORMAL DATASET"
 
 "TN"
-significant_genes_TN_large_dataset =  compareTwoCategories(processed_test_normal, 
-                                            normal_test_data, 
+significant_genes_TN_large_dataset =  compareTwoCategories(
                                             processedTN,
-                                            TN, .05, "TN_diff")
+                                            TN, processed_test_normal, 
+                                            normal_test_data, .05, "TN_diff")
 "HER2"
-significant_genes_HER2_large_dataset =  compareTwoCategories(processed_test_normal, 
-                                            normal_test_data, 
+significant_genes_HER2_large_dataset =  compareTwoCategories( 
                                             processedHER2,
-                                            HER2, .05, "HER2_diff")
+                                            HER2,processed_test_normal, 
+                                            normal_test_data, .05, "HER2_diff")
 
 "LuminalA"
-significant_genes_LuminalA_large_dataset =  compareTwoCategories(processed_test_normal, 
-                                            normal_test_data, 
+significant_genes_LuminalA_large_dataset =  compareTwoCategories( 
                                             processedLuminalA,
-                                            LuminalA, .05, "LuminalA_diff")
+                                            LuminalA,processed_test_normal, 
+                                            normal_test_data, .05, "LuminalA_diff")
 
 "LuminalB"
-significant_genes_LuminalB_large_dataset =  compareTwoCategories(processed_test_normal, 
-                                            normal_test_data, 
+significant_genes_LuminalB_large_dataset =  compareTwoCategories(
                                             processedLuminalB,
-                                            LuminalB, .05, "LuminalB_diff")
+                                            LuminalB,processed_test_normal, 
+                                            normal_test_data,  .05, "LuminalB_diff")
 
 "luminalHER2"
-significant_genes_luminalHER2_large_dataset =  compareTwoCategories(processed_test_normal, 
-                                            normal_test_data, 
+significant_genes_luminalHER2_large_dataset =  compareTwoCategories(
                                             processedLuminalHER2,
-                                            luminalHER2, .05, "luminalHER2_diff")                                            
+                                            luminalHER2,processed_test_normal, 
+                                            normal_test_data,  .05, "luminalHER2_diff")                                            
 
 "EACH SUBTYPE VS SUBTYPE DATASET"
 
 "TN"
-significant_genes_TN =  compareTwoCategories(processedNormal, 
-                                            normalBreast, 
+significant_genes_TN =  compareTwoCategories(
                                             processedTN,
-                                            TN, .05, "TN_diff")
+                                            TN,processedNormal, 
+                                            normalBreast,  .05, "TN_diff")
 "HER2"
-significant_genes_HER2 =  compareTwoCategories(processedNormal, 
-                                            normalBreast, 
+significant_genes_HER2 =  compareTwoCategories( 
                                             processedHER2,
-                                            HER2, .05, "HER2_diff")
+                                            HER2,processedNormal, 
+                                            normalBreast, .05, "HER2_diff")
 
 "LuminalA"
-significant_genes_LuminalA =  compareTwoCategories(processedNormal, 
-                                            normalBreast, 
+significant_genes_LuminalA =  compareTwoCategories( 
                                             processedLuminalA,
-                                            LuminalA, .05, "LuminalA_diff")
+                                            LuminalA,processedNormal, 
+                                            normalBreast, .05, "LuminalA_diff")
 
 "LuminalB"
-significant_genes_LuminalB =  compareTwoCategories(processedNormal, 
-                                            normalBreast, 
+significant_genes_LuminalB =  compareTwoCategories(
                                             processedLuminalB,
-                                            LuminalB, .05, "LuminalB_diff")
+                                            LuminalB,processedNormal, 
+                                            normalBreast,  .05, "LuminalB_diff")
 
 "luminalHER2"
-significant_genes_luminalHER2 =  compareTwoCategories(processedNormal, 
-                                            normalBreast, 
+significant_genes_luminalHER2 =  compareTwoCategories(
                                             processedLuminalHER2,
-                                            luminalHER2, .05, "luminalHER2_diff")   
+                                            luminalHER2,processedNormal, 
+                                            normalBreast,  .05, "luminalHER2_diff")   
 
 
 "TEST 2 - GWAS"
@@ -234,6 +244,7 @@ gwas_genes = read_tsv('genes.tsv')
 significant_gwas_genes_summary = inner_join(joined_final_results_confirmation_test, gwas_genes)
 significant_gwas_genes = pull(significant_gwas_genes_summary, Gene)
 print(significant_gwas_genes)
+view(significant_gwas_genes_summary)
 
 general_gwas_genes = filter(general_test_data, Gene %in% significant_gwas_genes)
 normal_gwas_genes = filter(normal_test_data, Gene %in% significant_gwas_genes)
@@ -281,71 +292,71 @@ test_data = rbind(subtypes_gwas_genes, normal_test_data %>% mutate(Accession = "
 print(test_data)
 "STATISTICAL ANALYSIS"
 print(paste0("ALPHA ", .05 / length(significant_gwas_genes)))
-significant_genes_all_types_gwas = performStatisticalAnalysis(test_data, significant_gwas_genes, .05 / length(significant_gwas_genes))
+significant_genes_all_types_gwas = performStatisticalAnalysis(subtypes_gwas_genes, significant_gwas_genes, .05 / length(significant_gwas_genes))
 print(significant_genes_all_types_gwas)
 write_tsv(significant_genes_all_types_gwas, 'out/significant_genes_all_types_gwas.tsv')
-
+view(significant_genes_all_types_gwas)
 "Each SUBTYPE VS LARGE NORMAL DATASET"
-print(unique(pull(TN, Category)))
+
 "TN"
-significant_genes_TN_large_dataset =  compareTwoCategories(processed_test_normal, 
-                                            normal_test_data, 
+significant_genes_TN_large_dataset =  compareTwoCategories(
                                             processedTN,
-                                            TN, .05, "TN_diff")
+                                            TN,processed_test_normal, 
+                                            normal_test_data,  .05, "TN_diff")
 "HER2"
-significant_genes_HER2_large_dataset =  compareTwoCategories(processed_test_normal, 
-                                            normal_test_data, 
+significant_genes_HER2_large_dataset =  compareTwoCategories( 
                                             processedHER2,
-                                            HER2, .05, "HER2_diff")
+                                            HER2,processed_test_normal, 
+                                            normal_test_data, .05, "HER2_diff")
 
 "LuminalA"
-significant_genes_LuminalA_large_dataset =  compareTwoCategories(processed_test_normal, 
-                                            normal_test_data, 
+significant_genes_LuminalA_large_dataset =  compareTwoCategories(
                                             processedLuminalA,
-                                            LuminalA, .05, "LuminalA_diff")
+                                            LuminalA,processed_test_normal, 
+                                            normal_test_data,  .05, "LuminalA_diff")
 
 "LuminalB"
-significant_genes_LuminalB_large_dataset =  compareTwoCategories(processed_test_normal, 
-                                            normal_test_data, 
+significant_genes_LuminalB_large_dataset =  compareTwoCategories(
                                             processedLuminalB,
-                                            LuminalB, .05, "LuminalB_diff")
+                                            LuminalB,processed_test_normal, 
+                                            normal_test_data,  .05, "LuminalB_diff")
 
 "luminalHER2"
-significant_genes_luminalHER2_large_dataset =  compareTwoCategories(processed_test_normal, 
-                                            normal_test_data, 
+significant_genes_luminalHER2_large_dataset =  compareTwoCategories(
                                             processedLuminalHER2,
-                                            luminalHER2, .05, "luminalHER2_diff")                                            
+                                            luminalHER2,processed_test_normal, 
+                                            normal_test_data,  .05, "luminalHER2_diff")                                            
 
 "EACH SUBTYPE VS SUBTYPE DATASET"
 
 "TN"
-significant_genes_TN =  compareTwoCategories(processedNormal, 
-                                            normalBreast, 
+significant_genes_TN =  compareTwoCategories( 
                                             processedTN,
-                                            TN, .05, "TN_diff")
+                                            TN,processedNormal, 
+                                            normalBreast, .05, "TN_diff")
 "HER2"
-significant_genes_HER2 =  compareTwoCategories(processedNormal, 
-                                            normalBreast, 
+significant_genes_HER2 =  compareTwoCategories( 
                                             processedHER2,
-                                            HER2, .05, "HER2_diff")
+                                            HER2,processedNormal, 
+                                            normalBreast, .05, "HER2_diff")
 
 "LuminalA"
-significant_genes_LuminalA =  compareTwoCategories(processedNormal, 
-                                            normalBreast, 
+significant_genes_LuminalA =  compareTwoCategories( 
                                             processedLuminalA,
-                                            LuminalA, .05, "LuminalA_diff")
+                                            LuminalA,processedNormal, 
+                                            normalBreast, .05, "LuminalA_diff")
 
 "LuminalB"
-significant_genes_LuminalB =  compareTwoCategories(processedNormal, 
-                                            normalBreast, 
+significant_genes_LuminalB =  compareTwoCategories(
                                             processedLuminalB,
-                                            LuminalB, .05, "LuminalB_diff")
+                                            LuminalB,processedNormal, 
+                                            normalBreast,  .05, "LuminalB_diff")
 
 "luminalHER2"
-significant_genes_luminalHER2 =  compareTwoCategories(processedNormal, 
-                                            normalBreast, 
+significant_genes_luminalHER2 =  compareTwoCategories( 
                                             processedLuminalHER2,
-                                            luminalHER2, .05, "luminalHER2_diff")   
+                                            luminalHER2,processedNormal, 
+                                            normalBreast, .05, "luminalHER2_diff")   
 
 
 "CREATE FILES FOR LATER ANALYSIS"
@@ -455,6 +466,7 @@ generate_one_v_all_diff_file(processedNormal, "out/normal_vs_all.tsv", "NORMAL")
 
 generate_one_v_all_diff_file(processedTN, "out/TN_vs_all.tsv", "TN")
 
+
 #Invitro vs all
 
 generate_one_v_all_diff_file(processedInVitro, "out/invitro_vs_all.tsv", "INVITRO")
@@ -520,33 +532,33 @@ write_tsv(
 )
 
 
-"All Gene no threshold"
-normal_test_data = mutate(raw_normal, Category = 'Normal')
-general_test_data = mutate(raw_general, Category = 'General')
-confirm_test_data = mutate(raw_confirm, Category = 'Confirm')
+# "All Gene no threshold"
+# normal_test_data = mutate(raw_normal, Category = 'Normal')
+# general_test_data = mutate(raw_general, Category = 'General')
+# confirm_test_data = mutate(raw_confirm, Category = 'Confirm')
 
-"Compare First Dataset to Normal"
-general_vs_normal_all = compareTwo(processed_test_normal, processed_general, 0)
-general_vs_normal_all = rename(general_vs_normal_all, general_diff = diff)
-significant_genes_test_1_all = compareTwoCategories(processed_test_normal, normal_test_data, processed_general, general_test_data, -1, "general_diff", 0)
+# "Compare First Dataset to Normal"
+# general_vs_normal_all = compareTwo(processed_general, processed_test_normal, 0)
+# general_vs_normal_all = rename(general_vs_normal_all, general_diff = diff)
+# significant_genes_test_1_all = compareTwoCategories(processed_test_normal, normal_test_data, processed_general, general_test_data, -1, "general_diff", 0)
 
-#Confirm Results
+# #Confirm Results
 
-"Compare Second Dataset to Normal"
-confirm_vs_normal_all = compareTwo(processed_test_normal, processed_confirm, 0)
-confirm_vs_normal_all = rename(confirm_vs_normal_all, confirm_diff = diff)
-significant_genes_test_2_all =  compareTwoCategories(processed_test_normal, normal_test_data, processed_confirm, confirm_test_data, -1, "confirm_diff", 0)
+# "Compare Second Dataset to Normal"
+# confirm_vs_normal_all = compareTwo(processed_confirm,processed_test_normal, 0)
+# confirm_vs_normal_all = rename(confirm_vs_normal_all, confirm_diff = diff)
+# significant_genes_test_2_all =  compareTwoCategories(processed_test_normal, normal_test_data, processed_confirm, confirm_test_data, -1, "confirm_diff", 0)
 
-"Combine Results"
-significant_genes_test_1_all = rename(significant_genes_test_1_all, p_value_test_1 = p_value)
-significant_genes_test_2_all = rename(significant_genes_test_2_all, p_value_test_2 = p_value)
+# "Combine Results"
+# significant_genes_test_1_all = rename(significant_genes_test_1_all, p_value_test_1 = p_value)
+# significant_genes_test_2_all = rename(significant_genes_test_2_all, p_value_test_2 = p_value)
 
-joined_final_results_all = inner_join(significant_genes_test_1_all,significant_genes_test_2_all)
-joined_all = inner_join(joined_final_results_all, general_vs_normal_all)
-joined_final_results_confirmation_test_all = inner_join(joined_all, confirm_vs_normal_all)
+# joined_final_results_all = inner_join(significant_genes_test_1_all,significant_genes_test_2_all)
+# joined_all = inner_join(joined_final_results_all, general_vs_normal_all)
+# joined_final_results_confirmation_test_all = inner_join(joined_all, confirm_vs_normal_all)
 
-write_tsv(joined_final_results_confirmation_test_all, 'out/joined_final_results_confirmation_test_all.tsv')
+# write_tsv(joined_final_results_confirmation_test_all, 'out/joined_final_results_confirmation_test_all.tsv')
 
-print(paste0(c("Number of Genes", length(unique(pull(joined_final_results_confirmation_test_all, Gene))))))
-corrected_alpha = .05/length(unique(pull(joined_final_results_confirmation_test_all, Gene)))
-print(paste0(c("Corrected alpha", corrected_alpha)))
+# print(paste0(c("Number of Genes", length(unique(pull(joined_final_results_confirmation_test_all, Gene))))))
+# corrected_alpha = .05/length(unique(pull(joined_final_results_confirmation_test_all, Gene)))
+# print(paste0(c("Corrected alpha", corrected_alpha)))

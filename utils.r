@@ -28,6 +28,7 @@ performTwoWayStatisticalAnalysis = function(data, genes, corrected_alpha=.01, pr
                 if (dim(stat_data)[1] == 0){
                 }
                 else {
+                        # print(stat_data)
                         p_value = wilcox.test(Value ~ Category, data=stat_data)$p.value
                         if (p_value < corrected_alpha){
                                 diff = filter(process_data, Gene == gene)$diff
@@ -58,7 +59,7 @@ compareTwoCategories = function(data1, rawData1, data2, rawData2, alpha, colname
         }
         print(paste0("ALPHA ", corrected_alpha))
         significant_genes_test = performTwoWayStatisticalAnalysis(joined_test, genes_test, corrected_alpha,data1_vs_data2, colname)
-        print(significant_genes_test)
+        # print(significant_genes_test)
         return(significant_genes_test)
 }
 
@@ -93,7 +94,7 @@ performStatisticalAnalysis = function(data, genes, alpha = .05){
                 }
                 else {
                         table = addToTable(table, result, gene, alpha)
-                        print(result)
+                        # print(result)
                 }
         }
         return(table)
@@ -102,7 +103,7 @@ performStatisticalAnalysis = function(data, genes, alpha = .05){
 # Performs an ANOVA test if data is normal. If data is not the same, it them performs a TukeyHSD analysis
 statisticalAnalysis = function(data, gene, alpha = .05){
         stat_data = filter(data, Gene == gene)
-
+        print(c("KRUSKAL P-Value", kruskal.test(Value ~ Category, data=stat_data)$p.value, alpha))
         if (kruskal.test(Value ~ Category, data=stat_data)$p.value < alpha) {
                 results = posthoc.kruskal.dunn.test(Value ~ Category, data=stat_data, dist="Tukey", p.adjust.method="fdr")
                 return(results)
