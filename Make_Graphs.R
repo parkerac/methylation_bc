@@ -11,9 +11,9 @@ data_normal = read_tsv("GSE89278_RAW_Control_Methylation_Analysis_Data.txt")
 all_output = read_tsv("joined_final_results_confirmation_test_all.tsv")
 
 data_general = data_general %>%
-  mutate(Dataset = "General")
+  mutate(Dataset = "General1")
 data_confirm = data_confirm %>%
-  mutate(Dataset = "Confirm")
+  mutate(Dataset = "General2")
 data_subtypes = data_subtypes %>%
   mutate(Dataset = "Subtypes")
 data_normal = data_normal %>%
@@ -54,14 +54,14 @@ all_scatter_data = hist_data %>%
   pivot_longer(c(p_value_test_1, p_value_test_2), names_to = "P_Value_Category")
 
 png("volcano_general.png")
-EnhancedVolcano(all_output, all_output$Gene, x = "general_diff", y = "p_value_test_1", title = "General Comparison", 
+EnhancedVolcano(all_output, all_output$Gene, x = "general_diff", y = "p_value_test_1", title = "General1 Comparison", 
                 subtitle = element_blank(), pCutoff = 9.425e-5, FCcutoff = 0.3,
                 xlab = "Methylation beta change", pointSize = 1, caption = "Total = 22,579 genes",
                 legendPosition = "bottom", legendLabels = c("not significant", "beta change", "p-value", "p-value and beta change"))
 dev.off()
 
 png("volcano_confirm.png")
-EnhancedVolcano(all_output, all_output$Gene, x = "confirm_diff", y = "p_value_test_2", title = "Confirm Comparison", 
+EnhancedVolcano(all_output, all_output$Gene, x = "confirm_diff", y = "p_value_test_2", title = "General2 Comparison", 
                 subtitle = element_blank(), pCutoff = 8.012e-6, FCcutoff = 0.3,
                 xlab = "Methylation beta change", pointSize = 1, caption = "Total = 22,579 genes",
                 legendPosition = "bottom", legendLabels = c("not significant", "beta change", "p-value", "p-value and beta change"))
@@ -95,7 +95,8 @@ ggsave("all_scatter_plot.png", all_scatter_plot)
     geom_density(mapping = aes(y = ..scaled..)) +
     facet_wrap(~Dataset) +
     theme_bw() +
-    ylab("Scaled Proportion"))
+    ylab("Scaled proportion of genes") +
+    xlab("Methylation beta value"))
 ggsave("density_plot.png", density_plot)
 
 # Scatterplot of pvals from test 1
@@ -128,9 +129,10 @@ greatest_diffs = data_all %>%
 
 line_data = data_all %>%
   filter(Gene %in% greatest_diffs) %>%
-  mutate(Dataset = factor(Dataset, levels = c("General", "Confirm", "Subtypes", "Normal")))
-(violin_plot = ggplot(line_data, aes(x = Gene, y = Value)) +
-  geom_violin() +
+  mutate(Dataset = factor(Dataset, levels = c("General1", "General2", "Subtypes", "Normal")))
+(violin_plot = ggplot(line_data, aes(x = Gene, y = Value, fill = Gene)) +
+    geom_violin() +
+    geom_boxplot(width=0.1, color="grey", alpha=0.2) +
   facet_wrap(~ Dataset))
 ggsave("violin_plot.png", violin_plot)
 
@@ -172,7 +174,8 @@ box_data = data_all %>%
     geom_boxplot() +
     facet_wrap(~Gene) +
     theme_bw() +
-    theme(axis.text = element_text(size = 8, angle = 25)))
+    theme(axis.text = element_text(size = 8, angle = 25)) +
+    ylab("Methylation beta value"))
 ggsave("box_plot.png", box_plot)
 
 
@@ -185,5 +188,6 @@ subtype_box_data = common_genes_all %>%
     theme(axis.title.x = element_blank(),
           axis.text.x = element_blank(),
           axis.ticks.x = element_blank()) + 
-    facet_wrap(~Gene))
+    facet_wrap(~Gene) +
+    ylab("Methylation beta value"))
 ggsave("subtypes_box_plot.png", subtypes_box_plot)
